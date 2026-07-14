@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retail Sales Intelligence App</title>
+  
+  <!-- CDNs -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col md:flex-row">
+
+  <!-- Mobile Header (Visible only on small screens) -->
+  <header class="md:hidden bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between no-print">
+    <div class="flex items-center gap-2">
+      <div class="bg-indigo-600 text-white p-2 rounded-lg">
+        <i class="fa-solid fa-chart-pie"></i>
+      </div>
+      <span class="font-bold text-slate-800 tracking-tight">RetailIQ</span>
+    </div>
+    <button id="mobile-menu-btn" class="p-2 text-slate-500 hover:text-slate-800 focus:outline-none">
+      <i class="fa-solid fa-bars text-xl"></i>
+    </button>
+  </header>
+
+  <!-- Sidebar Component -->
+  <aside id="sidebar" class="hidden md:flex flex-col w-full md:w-80 bg-white border-r border-slate-200 h-screen sticky top-0 overflow-y-auto no-print z-50">
+    <div class="p-6 border-b border-slate-100 flex flex-col gap-4">
+      <div class="flex items-center gap-2">
+        <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-sm">
+          <i class="fa-solid fa-chart-pie text-lg"></i>
+        </div>
+        <div>
+          <h1 class="font-extrabold text-slate-950 text-base leading-none">RetailIQ</h1>
+          <span class="text-xs text-slate-400 font-medium">Sales Intelligence Platform</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 mt-2">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Status:</span>
+        <span id="status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+          No Data Loaded
+        </span>
+      </div>
+    </div>
+
+    <!-- Scrollable content inside sidebar -->
+    <div class="p-6 flex-1 flex flex-col gap-6">
+      
+      <!-- Source Config -->
+      <div>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+          <i class="fa-solid fa-database"></i> Source Configurations
+        </h3>
+        <div class="flex flex-col gap-2">
+          <button onclick="loadDemo()" class="w-full px-4 py-2.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-semibold rounded-lg text-sm transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Load Demo Dataset
+          </button>
+          
+          <div class="mt-2 text-center text-[11px] text-slate-400 font-medium">
+            OR UPLOAD SOURCE FILES
+          </div>
+          
+          <!-- File inputs -->
+          <div class="flex flex-col gap-3 mt-1">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Store Master (20 Rows)</label>
+              <input type="file" id="upload-store" accept=".csv,.xlsx,.xls" onchange="handleFileUpload(event, 'store')" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer" />
+              <div id="status-store" class="text-[10px] text-slate-400 mt-0.5">Not uploaded</div>
+            </div>
+            
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Weekly Sales (1,920 Rows)</label>
+              <input type="file" id="upload-sales" accept=".csv,.xlsx,.xls" onchange="handleFileUpload(event, 'sales')" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer" />
+              <div id="status-sales" class="text-[10px] text-slate-400 mt-0.5">Not uploaded</div>
+            </div>
+          </div>
+
+          <!-- Template downloads -->
+          <div class="flex gap-2 mt-2">
+            <button onclick="downloadSample('store')" class="flex-1 py-1 px-2 text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-center transition">
+              <i class="fa-solid fa-download mr-1"></i> Store Master Template
+            </button>
+            <button onclick="downloadSample('sales')" class="flex-1 py-1 px-2 text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-center transition">
+              <i class="fa-solid fa-download mr-1"></i> Sales Template
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <hr class="border-slate-100">
+
+      <!-- Dynamic Filters Container -->
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-filter"></i> Active Filters
+          </h3>
+          <button onclick="resetFilters()" class="text-xs font-semibold text-indigo-600 hover:underline">
+            Reset
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 mb-1">Week Select</label>
+            <select id="filter-week" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+              <option value="All">All</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 mb-1">Region Select</label>
+            <select id="filter-region" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+              <option value="All">All</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 mb-1">City Select</label>
+            <select id="filter-city" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+              <option value="All">All</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 mb-1">Store Format</label>
+            <select id="filter-format" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+              <option value="All">All</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 mb-1">Specific Store</label>
+            <select id="filter-store" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+              <option value="All">All</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 mb-1">Product Category</label>
+            <select id="filter-category" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+              <option value="All">All</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Workstation Panel -->
+  <main class="flex-1 overflow-y-auto p-6 md:p-8 flex flex-col gap-6">
+    
+    <!-- Empty State Overlay Container (Shown when no dataset loaded) -->
+    <div id="empty-state-container" class="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center max-w-2xl mx-auto my-auto transition duration-150">
+      <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+        <i class="fa-solid fa-chart-line text-2xl"></i>
+      </div>
+      <h3 class="text-xl font-extrabold text-slate-800 mb-2">No Active Retail Data Source</h3>
+      <p class="text-slate-500 text-sm mb-8 leading-relaxed max-w-md mx-auto">
+        To activate the analytical dashboards, dynamic business recommendations, and performance visualizations, please load the synthetic demo dataset or upload your own structured files.
+      </p>
+      <div class="flex flex-col sm:flex-row justify-center gap-3">
+        <button onclick="loadDemo()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Load Demo Dataset
+        </button>
+        <button onclick="document.getElementById('sidebar').classList.remove('hidden')" class="md:hidden px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Upload Source Sheets
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Analytical Dashboard Frame (Hidden initially) -->
+    <div id="dashboard-grid" class="hidden flex flex-col gap-6">
+      
+      <!-- Welcome Headline Area -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print border-b border-slate-200 pb-4">
+        <div>
+          <h2 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Executive Dashboard</h2>
+          <p class="text-xs text-slate-500 font-medium">Cross-filtering dynamic performance matrices and operational indicators</p>
+        </div>
+        
+        <!-- Action Trigger Group -->
+        <div class="flex items-center gap-2 self-start md:self-auto">
+          <button onclick="exportFilteredData()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition flex items-center gap-1.5">
+            <i class="fa-solid fa-file-export"></i> Export CSV
+          </button>
+          <button onclick="printInsights()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold rounded-lg transition flex items-center gap-1.5">
+            <i class="fa-solid fa-print"></i> Print Insights
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Deck -->
+      <section class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- KPI Card 1 -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
+          <div>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Net Sales</span>
+            <div id="kpi-net-sales" class="text-base md:text-lg font-black text-slate-900 mt-1">$0</div>
+          </div>
+          <div class="text-[10px] text-slate-500 mt-3 font-medium flex items-center gap-1">
+            <i class="fa-solid fa-circle-info text-slate-300"></i> Net of product returns
+          </div>
+        </div>
+
+        <!-- KPI Card 2 -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
+          <div>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Target Achievement</span>
+            <div id="kpi-target" class="text-base md:text-lg font-black text-slate-900 mt-1">0%</div>
+          </div>
+          <div class="text-[10px] text-slate-500 mt-3 font-medium flex items-center gap-1">
+            <i class="fa-solid fa-bullseye text-slate-300"></i> Baseline objective achievement
+          </div>
+        </div>
+
+        <!-- KPI Card 3 -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
+          <div>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Avg Transaction Value</span>
+            <div id="kpi-atv" class="text-base md:text-lg font-black text-slate-900 mt-1">$0.00</div>
+          </div>
+          <div class="text-[10px] text-slate-500 mt-3 font-medium flex items-center gap-1">
+            <i class="fa-solid fa-receipt text-slate-300"></i> Spend per checkout session
+          </div>
+        </div>
+
+        <!-- KPI Card 4 -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
+          <div>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Return Rate</span>
+            <div id="kpi-returns" class="text-base md:text-lg font-black text-slate-900 mt-1">0.0%</div>
+          </div>
+          <div class="text-[10px] text-slate-500 mt-3 font-medium flex items-center gap-1">
+            <i class="fa-solid fa-arrow-rotate-left text-slate-300"></i> Return amount / net sales
+          </div>
+        </div>
+
+        <!-- KPI Card 5 -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
+          <div>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Discount Rate</span>
+            <div id="kpi-discounts" class="text-base md:text-lg font-black text-slate-900 mt-1">0.0%</div>
+          </div>
+          <div class="text-[10px] text-slate-500 mt-3 font-medium flex items-center gap-1">
+            <i class="fa-solid fa-tags text-slate-300"></i> Promotional markdown volume
+          </div>
+        </div>
+      </section>
+
+      <!-- Charts Section: Layout Grid -->
+      <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        
+        <!-- Weekly Sales Trend Line Chart (Full Width) -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 xl:col-span-3">
+          <div class="flex items-center justify-between mb-4 border-b border-slate-50 pb-3">
+            <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-chart-line text-indigo-500"></i> Weekly Performance Trend vs Target
+            </h4>
+            <span class="text-[10px] font-semibold text-slate-400">Week-over-Week Metrics</span>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="chart-trend"></canvas>
+          </div>
+        </div>
+
+        <!-- Sales by Region Donut Chart -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+          <div class="flex items-center justify-between mb-4 border-b border-slate-50 pb-3">
+            <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-earth-americas text-indigo-500"></i> Regional Sales Weight
+            </h4>
+            <span class="text-[10px] font-semibold text-slate-400">Contribution Share</span>
+          </div>
+          <div class="h-56 relative">
+            <canvas id="chart-region"></canvas>
+          </div>
+        </div>
+
+        <!-- Category Performance Bar Chart -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 xl:col-span-2">
+          <div class="flex items-center justify-between mb-4 border-b border-slate-50 pb-3">
+            <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-boxes-stacked text-indigo-500"></i> Performance by Category
+            </h4>
+            <span class="text-[10px] font-semibold text-slate-400">Sales Volume</span>
+          </div>
+          <div class="h-56 relative">
+            <canvas id="chart-category"></canvas>
+          </div>
+        </div>
+
+        <!-- Store Leaderboard Horizontal Bar Chart -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 xl:col-span-2">
+          <div class="flex items-center justify-between mb-4 border-b border-slate-50 pb-3">
+            <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-ranking-star text-indigo-500"></i> Top 10 Store Hub Leaderboard
+            </h4>
+            <span class="text-[10px] font-semibold text-slate-400">Net Contribution Rank</span>
+          </div>
+          <div class="h-72 relative">
+            <canvas id="chart-leaderboard"></canvas>
+          </div>
+        </div>
+
+        <!-- Stockout Risk Analytics Hub -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4 border-b border-slate-50 pb-3">
+              <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-indigo-500"></i> Supply Risk Monitor
+              </h4>
+              <span class="text-[10px] font-semibold text-slate-400">Stockout Probabilities</span>
+            </div>
+            
+            <!-- Gauge Canvas -->
+            <div class="h-28 relative flex items-center justify-center">
+              <canvas id="chart-stockout-gauge"></canvas>
+              <!-- Absolute Text Overlay below semi circle -->
+              <div class="absolute bottom-1 text-center">
+                <div id="gauge-val" class="text-base font-extrabold text-slate-900">0.0</div>
+                <div id="gauge-status" class="text-[10px] text-slate-400">Optimized</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stockout Visual Progress Bar List -->
+          <div class="mt-4 flex-1">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-3">High Incident Store Risk Areas</span>
+            <div id="stockout-list" class="space-y-3">
+              <!-- Dynamically populated stockout list -->
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Business Insights Header -->
+      <section class="border-t border-slate-200 pt-6">
+        <div class="flex items-center gap-2.5 mb-4">
+          <div class="bg-indigo-600 text-white p-1.5 rounded-lg">
+            <i class="fa-solid fa-lightbulb"></i>
+          </div>
+          <div>
+            <h4 class="text-base font-extrabold text-slate-950 tracking-tight">AI Sales Intelligence Narrative</h4>
+            <p class="text-xs text-slate-500">Dynamic operational highlights and corrective recommendations generated directly from active context metrics</p>
+          </div>
+        </div>
+
+        <!-- Insights Container Panel -->
+        <div id="ai-insights-box" class="bg-white border border-slate-100 shadow-sm rounded-xl p-5">
+          <!-- Dynamically populated AI-style insights summary -->
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- JS Code and Engine Core Logic -->
+  <script>
+    // Global State management
+    const state = {
+      stores: [],
+      sales: [],
+      filters: {
+        week: 'All',
+        region: 'All',
+        store: 'All',
+        city: 'All',
+        format: 'All',
+        category: 'All'
+      }
+    };
+
+    // Keep memory tracker of Chart instances
+    const charts = {
+      trend: null,
+      region: null,
+      category: null,
+      leaderboard: null,
+      stockoutGauge: null
+    };
+
+    // Mobile Sidebar UI Toggle
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    if (mobileMenuBtn && sidebar) {
+      mobileMenuBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('hidden');
+      });
+    }
+
+    // Auto load mock dataset on startup
+    window.addEventListener('DOMContentLoaded', () => {
+      loadDemo();
+    });
+
+    // Reset Dropdowns
+    function resetFilters() {
+      const filterKeys = ['week', 'region', 'store', 'city', 'format', 'category'];
+      filterKeys.forEach(key => {
+        document.getElementById(`filter-${key}`).value = 'All';
+        state.filters[key] = 'All';
+      });
+      applyFilters();
+    }
+
+    // Generator function for mockup dataset matching exact user criteria
+    function generateDemoData() {
+      const regions = ["North", "South", "East", "West"];
+      const cities = {
+        "North": ["New York", "Boston", "Chicago"],
+        "South": ["Houston", "Miami", "Atlanta"],
+        "East": ["Philadelphia", "Washington", "Charlotte"],
+        "West": ["Los Angeles", "San Francisco", "Seattle"]
+      };
+      const formats = ["Supermarket", "Express", "Hypermarket", "Boutique"];
+      const categories = ["Electronics", "Apparel", "Home & Kitchen", "Beauty & Personal Care", "Groceries", "Sports & Outdoors"];
+      
+      // 1. Generate 20 exact store locations
+      const stores = [];
+      for (let i = 1; i <= 20; i++) {
+        const store_id = "S" + String(i).padStart(3, '0');
+        const region = regions[i % regions.length];
+        const cityList = cities[region];
+        const city = cityList[i % cityList.length];
+        const store_format = formats[i % formats.length];
+        const store_name = `${city} ${store_format} #${i}`;
+        stores.push({ store_id, store_name, region, city, store_format });
+      }
+      
+      // 2. Generate exactly 1,920 sales matrix rows (20 Stores * 16 Weeks * 6 Categories = 1,920 Rows)
+      const sales = [];
+      for (let s = 0; s < 20; s++) {
+        const store = stores[s];
+        for (let w = 1; w <= 16; w++) {
+          const week = "Week " + String(w).padStart(2, '0');
+          for (let c = 0; c < 6; c++) {
+            const category = categories[c];
+            
+            // Baseline variables with distinct characteristics based on format and categories
+            let baseSales = 12000;
+            if (category === "Electronics") baseSales = 24000;
+            if (category === "Groceries") baseSales = 32000;
+            if (store.store_format === "Boutique") baseSales *= 0.65;
+            if (store.store_format === "Hypermarket") baseSales *= 1.45;
+            
+            // Trend curve progression (slight upward slope)
+            const trend = 1 + (w * 0.015);
+            const randomFactor = 0.8 + Math.random() * 0.4; // +/- 20% volatility
+            const sales_amount = Math.round(baseSales * trend * randomFactor);
+            const target_amount = Math.round(baseSales * trend * (0.85 + Math.random() * 0.3));
+            
+            // Returns calculation (Higher volatility margins in Apparel/Electronics classifications)
+            let returnRate = 0.02 + Math.random() * 0.03;
+            if (category === "Apparel") returnRate = 0.07 + Math.random() * 0.07;
+            if (category === "Electronics") returnRate = 0.05 + Math.random() * 0.05;
+            const return_amount = Math.round(sales_amount * returnRate);
+            
+            // Discounts
+            const discountRate = 0.03 + Math.random() * 0.11;
+            const discount_amount = Math.round(sales_amount * discountRate);
+            
+            // Checkout Average Transaction volume
+            let avgTicketVal = 45;
+            if (category === "Electronics") avgTicketVal = 280;
+            if (category === "Groceries") avgTicketVal = 25;
+            const transactions_count = Math.round(sales_amount / avgTicketVal) || 1;
+            
+            // Inventory incident points
+            const stockout_items = Math.max(0, Math.floor(Math.random() * 10) - 3);
+            
+            sales.push({
+              store_id: store.store_id,
+              week: week,
+              category: category,
+              sales_amount: sales_amount,
+              target_amount: target_amount,
+              transactions_count: transactions_count,
+              return_amount: return_amount,
+              discount_amount: discount_amount,
+              stockout_items: stockout_items
+            });
+          }
+        }
+      }
+      
+      return { stores, sales };
+    }
+
+    // Clean trigger to load mockup configurations into live execution state
+    function loadDemo() {
+      const demo = generateDemoData();
+      state.stores = demo.stores;
+      state.sales = demo.sales;
+      
+      const storeStatus = document.getElementById('status-store');
+      storeStatus.className = "text-[10px] text-emerald-600 font-semibold mt-0.5";
+      storeStatus.innerHTML = `<i class="fa-solid fa-circle-check"></i> Demo Active (${state.stores.length} Stores)`;
+      
+      const salesStatus = document.getElementById('status-sales');
+      salesStatus.className = "text-[10px] text-emerald-600 font-semibold mt-0.5";
+      salesStatus.innerHTML = `<i class="fa-solid fa-circle-check"></i> Demo Active (${state.sales.length} Rows)`;
+
+      document.getElementById('status-badge').className = "px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-300";
+      document.getElementById('status-badge').textContent = "Demo Data Active";
+      
+      populateFilters();
+      applyFilters();
+    }
+
+    // Generic safe upload parser mapping variations to strict data layout requirements
+    function handleFileUpload(event, type) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        if (type === 'store') {
+          state.stores = parseStoreMaster(jsonData);
+          const storeStatus = document.getElementById('status-store');
+          storeStatus.className = "text-[10px] text-indigo-600 font-semibold mt-0.5";
+          storeStatus.innerHTML = `<i class="fa-solid fa-circle-check"></i> Loaded Master: ${state.stores.length} Stores`;
+        } else if (type === 'sales') {
+          state.sales = parseWeeklySales(jsonData);
+          const salesStatus = document.getElementById('status-sales');
+          salesStatus.className = "text-[10px] text-indigo-600 font-semibold mt-0.5";
+          salesStatus.innerHTML = `<i class="fa-solid fa-circle-check"></i> Loaded Trans: ${state.sales.length} Rows`;
+        }
+        
+        checkAndInitData();
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Keys sanitization & formatting normalizer for robustness against uploaded file variation headers
+    function sanitizeKeys(obj) {
+      const result = {};
+      Object.keys(obj).forEach(key => {
+        const cleanKey = key.trim().toLowerCase().replace(/[\s_]+/g, '_');
+        result[cleanKey] = obj[key];
+      });
+      return result;
+    }
+
+    function parseStoreMaster(rows) {
+      return rows.map(r => {
+        const clean = sanitizeKeys(r);
+        return {
+          store_id: String(clean.store_id || clean.storeid || '').trim(),
+          store_name: String(clean.store_name || clean.storename || clean.name || '').trim(),
+          region: String(clean.region || 'Unknown').trim(),
+          city: String(clean.city || 'Unknown').trim(),
+          store_format: String(clean.store_format || clean.format || clean.storeformat || 'Standard').trim()
+        };
+      }).filter(item => item.store_id);
+    }
+
+    function parseWeeklySales(rows) {
+      return rows.map(r => {
+        const clean = sanitizeKeys(r);
+        return {
+          store_id: String(clean.store_id || clean.storeid || '').trim(),
+          week: String(clean.week || clean.week_no || clean.weekno || '').trim(),
+          category: String(clean.category || clean.product_category || clean.prod_cat || 'General').trim(),
+          sales_amount: parseFloat(clean.sales_amount || clean.sales || clean.amount || clean.salesamount || 0),
+          target_amount: parseFloat(clean.target_amount || clean.target || clean.targetamount || 0),
+          transactions_count: parseInt(clean.transactions_count || clean.transactions || clean.txns || clean.txn_count || 0),
+          return_amount: parseFloat(clean.return_amount || clean.returns || clean.returnamount || 0),
+          discount_amount: parseFloat(clean.discount_amount || clean.discounts || clean.discountamount || 0),
+          stockout_items: parseInt(clean.stockout_items || clean.stockouts || clean.stockoutitems || 0)
+        };
+      }).filter(item => item.store_id && item.week);
+    }
+
+    // Monitor both sources are live before applying analytical views
+    function checkAndInitData() {
+      if (state.stores.length > 0 && state.sales.length > 0) {
+        document.getElementById('status-badge').className = "px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-300";
+        document.getElementById('status-badge').textContent = "Custom Data Active";
+        
+        populateFilters();
+        applyFilters();
+      } else {
+        let statusText = "Awaiting Data Upload...";
+        if (state.stores.length > 0) statusText = "Awaiting Weekly Sales...";
+        if (state.sales.length > 0) statusText = "Awaiting Store Master...";
+        
+        document.getElementById('status-badge').className = "px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300";
+        document.getElementById('status-badge').textContent = statusText;
+      }
+    }
+
+    // Handle extraction of unique keys to feed interactive filters
+    function populateFilters() {
+      const filterElements = {
+        week: document.getElementById('filter-week'),
+        region: document.getElementById('filter-region'),
+        store: document.getElementById('filter-store'),
+        city: document.getElementById('filter-city'),
+        format: document.getElementById('filter-format'),
+        category: document.getElementById('filter-category')
+      };
+      
+      const currentVals = {
+        week: filterElements.week.value || 'All',
+        region: filterElements.region.value || 'All',
+        store: filterElements.store.value || 'All',
+        city: filterElements.city.value || 'All',
+        format: filterElements.format.value || 'All',
+        category: filterElements.category.value || 'All'
+      };
+
+      const weeks = [...new Set(state.sales.map(r => r.week))].sort();
+      const categories = [...new Set(state.sales.map(r => r.category))].sort();
+      const regions = [...new Set(state.stores.map(s => s.region))].sort();
+      const cities = [...new Set(state.stores.map(s => s.city))].sort();
+      const formats = [...new Set(state.stores.map(s => s.store_format))].sort();
+      const storeMap = {};
+      state.stores.forEach(s => storeMap[s.store_id] = s.store_name);
+      const storeIds = [...new Set(state.stores.map(s => s.store_id))].sort();
+
+      const populateSelect = (el, items, labelMap = null) => {
+        el.innerHTML = '<option value="All">All</option>';
+        items.forEach(item => {
+          const option = document.createElement('option');
+          option.value = item;
+          option.textContent = labelMap ? labelMap(item) : item;
+          el.appendChild(option);
+        });
+      };
+
+      populateSelect(filterElements.week, weeks);
+      populateSelect(filterElements.category, categories);
+      populateSelect(filterElements.region, regions);
+      populateSelect(filterElements.city, cities);
+      populateSelect(filterElements.format, formats);
+      populateSelect(filterElements.store, storeIds, id => `${id} - ${storeMap[id] || ''}`);
+
+      // Re-bind current selections or assign fallback
+      Object.keys(currentVals).forEach(key => {
+        if (Array.from(filterElements[key].options).some(opt => opt.value === currentVals[key])) {
+          filterElements[key].value = currentVals[key];
+        } else {
+          filterElements[key].value = 'All';
+        }
+        state.filters[key] = filterElements[key].value;
+      });
+    }
+
+    // Set interactive listeners on each filter dropdown select
+    const filterKeys = ['week', 'region', 'store', 'city', 'format', 'category'];
+    filterKeys.forEach(key => {
+      const el = document.getElementById(`filter-${key}`);
+      el.addEventListener('change', () => {
+        state.filters[key] = el.value;
+        applyFilters();
+      });
+    });
+
+    // Execute lookup join filter logic
+    function getFilteredRecords() {
+      if (!state.sales || state.sales.length === 0) return [];
+      
+      const storeMap = {};
+      state.stores.forEach(s => {
+        storeMap[s.store_id] = s;
+      });
+      
+      return state.sales.filter(row => {
+        const store = storeMap[row.store_id] || {};
+        
+        if (state.filters.week !== 'All' && row.week !== state.filters.week) return false;
+        if (state.filters.category !== 'All' && row.category !== state.filters.category) return false;
+        if (state.filters.region !== 'All' && store.region !== state.filters.region) return false;
+        if (state.filters.store !== 'All' && row.store_id !== state.filters.store) return false;
+        if (state.filters.city !== 'All' && store.city !== state.filters.city) return false;
+        if (state.filters.format !== 'All' && store.store_format !== state.filters.format) return false;
+        
+        return true;
+      });
+    }
+
+    // Primary pipeline processing visual updating
+    function applyFilters() {
+      const filtered = getFilteredRecords();
+      
+      if (state.sales.length > 0 && state.stores.length > 0) {
+        document.getElementById('empty-state-container').classList.add('hidden');
+        document.getElementById('dashboard-grid').classList.remove('hidden');
+        
+        updateKPIs(filtered);
+        updateCharts(filtered);
+        updateInsights(filtered);
+        updateStockoutRisk(filtered);
+      } else {
+        document.getElementById('empty-state-container').classList.remove('hidden');
+        document.getElementById('dashboard-grid').classList.add('hidden');
+      }
+    }
+
+    // Clear and redraw visualization charts
+    function destroyCharts() {
+      Object.keys(charts).forEach(key => {
+        if (charts[key]) {
+          charts[key].destroy();
+          charts[key] = null;
+        }
+      });
+    }
+
+    // Math formatter
+    function formatCurrency(val) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+    }
+
+    // KPI Metrics calculation
+    function updateKPIs(data) {
+      if (data.length === 0) {
+        document.getElementById('kpi-net-sales').textContent = "$0";
+        document.getElementById('kpi-target').textContent = "0%";
+        document.getElementById('kpi-atv').textContent = "$0.00";
+        document.getElementById('kpi-returns').textContent = "0.0%";
+        document.getElementById('kpi-discounts').textContent = "0.0%";
+        return;
+      }
+      
+      let totalSales = 0;
+      let totalTarget = 0;
+      let totalReturns = 0;
+      let totalDiscounts = 0;
+      let totalTxns = 0;
+      
+      data.forEach(r => {
+        totalSales += r.sales_amount;
+        totalTarget += r.target_amount;
+        totalReturns += r.return_amount;
+        totalDiscounts += r.discount_amount;
+        totalTxns += r.transactions_count;
+      });
+      
+      const netSales = totalSales - totalReturns;
+      const targetAch = totalTarget > 0 ? (totalSales / totalTarget) * 100 : 0;
+      const atv = totalTxns > 0 ? (totalSales / totalTxns) : 0;
+      
+      // Return Rate based on Formula: return_amount / net_sales * 100
+      const returnRate = netSales > 0 ? (totalReturns / netSales) * 100 : 0;
+      const discountRate = totalSales > 0 ? (totalDiscounts / totalSales) * 100 : 0;
+
+      document.getElementById('kpi-net-sales').textContent = formatCurrency(netSales);
+      document.getElementById('kpi-target').textContent = targetAch.toFixed(1) + "%";
+      document.getElementById('kpi-atv').textContent = formatCurrency(atv);
+      document.getElementById('kpi-returns').textContent = returnRate.toFixed(1) + "%";
+      document.getElementById('kpi-discounts').textContent = discountRate.toFixed(1) + "%";
+    }
+
+    // Build visualization canvas objects
+    function updateCharts(data) {
+      destroyCharts();
+      if (data.length === 0) return;
+      
+      const storeLookup = {};
+      state.stores.forEach(s => storeLookup[s.store_id] = s);
+      
+      // 1. Weekly Performance Trend Line Chart
+      const weeklyMap = {};
+      data.forEach(r => {
+        if (!weeklyMap[r.week]) weeklyMap[r.week] = { sales: 0, target: 0 };
+        weeklyMap[r.week].sales += (r.sales_amount - r.return_amount);
+        weeklyMap[r.week].target += r.target_amount;
+      });
+      const sortedWeeks = Object.keys(weeklyMap).sort();
+      const salesTrend = sortedWeeks.map(w => weeklyMap[w].sales);
+      const targetTrend = sortedWeeks.map(w => weeklyMap[w].target);
+
+      const ctxTrend = document.getElementById('chart-trend').getContext('2d');
+      charts.trend = new Chart(ctxTrend, {
+        type: 'line',
+        data: {
+          labels: sortedWeeks,
+          datasets: [
+            {
+              label: 'Net Sales ($)',
+              data: salesTrend,
+              borderColor: '#4f46e5',
+              backgroundColor: 'rgba(79, 70, 229, 0.03)',
+              fill: true,
+              tension: 0.25,
+              borderWidth: 3,
+              pointRadius: 3,
+              pointBackgroundColor: '#4f46e5'
+            },
+            {
+              label: 'Target Objective ($)',
+              data: targetTrend,
+              borderColor: '#94a3b8',
+              borderDash: [5, 5],
+              backgroundColor: 'transparent',
+              fill: false,
+              tension: 0.1,
+              borderWidth: 2,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { boxWidth: 15, font: { family: 'Inter', size: 11 } } }
+          },
+          scales: {
+            y: { ticks: { callback: value => '$' + value.toLocaleString(), font: { size: 10 } }, grid: { color: '#f1f5f9' } },
+            x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+          }
+        }
+      });
+
+      // 2. Sales Weight by Region Donut Chart
+      const regionMap = {};
+      data.forEach(r => {
+        const reg = storeLookup[r.store_id]?.region || 'Unknown';
+        regionMap[reg] = (regionMap[reg] || 0) + (r.sales_amount - r.return_amount);
+      });
+      const regionLabels = Object.keys(regionMap);
+      const regionValues = Object.values(regionMap);
+      
+      const ctxRegion = document.getElementById('chart-region').getContext('2d');
+      charts.region = new Chart(ctxRegion, {
+        type: 'doughnut',
+        data: {
+          labels: regionLabels,
+          datasets: [{
+            data: regionValues,
+            backgroundColor: ['#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { family: 'Inter', size: 10 } } }
+          },
+          cutout: '70%'
+        }
+      });
+
+      // 3. Category Performance vertical bar chart
+      const catMap = {};
+      data.forEach(r => {
+        catMap[r.category] = (catMap[r.category] || 0) + (r.sales_amount - r.return_amount);
+      });
+      const catLabels = Object.keys(catMap).sort((a,b) => catMap[b] - catMap[a]);
+      const catValues = catLabels.map(l => catMap[l]);
+
+      const ctxCategory = document.getElementById('chart-category').getContext('2d');
+      charts.category = new Chart(ctxCategory, {
+        type: 'bar',
+        data: {
+          labels: catLabels,
+          datasets: [{
+            label: 'Net Sales ($)',
+            data: catValues,
+            backgroundColor: '#4f46e5',
+            hoverBackgroundColor: '#4338ca',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { ticks: { callback: value => '$' + value.toLocaleString(), font: { size: 10 } }, grid: { color: '#f1f5f9' } },
+            x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+          }
+        }
+      });
+
+      // 4. Store Leaderboard horizontal bar chart
+      const storePerformance = {};
+      data.forEach(r => {
+        const name = storeLookup[r.store_id]?.store_name || r.store_id;
+        storePerformance[name] = (storePerformance[name] || 0) + (r.sales_amount - r.return_amount);
+      });
+      const topStores = Object.keys(storePerformance)
+        .map(name => ({ name, sales: storePerformance[name] }))
+        .sort((a,b) => b.sales - a.sales)
+        .slice(0, 10);
+      
+      const leaderLabels = topStores.map(s => s.name);
+      const leaderValues = topStores.map(s => s.sales);
+
+      const ctxLeader = document.getElementById('chart-leaderboard').getContext('2d');
+      charts.leaderboard = new Chart(ctxLeader, {
+        type: 'bar',
+        data: {
+          labels: leaderLabels,
+          datasets: [{
+            label: 'Net Sales ($)',
+            data: leaderValues,
+            backgroundColor: '#0ea5e9',
+            hoverBackgroundColor: '#0284c7',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { callback: value => '$' + value.toLocaleString(), font: { size: 10 } }, grid: { color: '#f1f5f9' } },
+            y: { ticks: { font: { size: 10 } }, grid: { display: false } }
+          }
+        }
+      });
+
+      // 5. Supply Chain Risk Gauge
+      const totalRiskIncidents = data.reduce((acc, r) => acc + r.stockout_items, 0);
+      const avgStockout = totalRiskIncidents / (data.length || 1);
+      const maxExpectedGauge = 10;
+      const rawRiskPercent = (avgStockout / maxExpectedGauge) * 100;
+      const percent = Math.min(100, Math.max(3, rawRiskPercent));
+
+      const ctxGauge = document.getElementById('chart-stockout-gauge').getContext('2d');
+      charts.stockoutGauge = new Chart(ctxGauge, {
+        type: 'doughnut',
+        data: {
+          labels: ['Risk Level', 'Remaining'],
+          datasets: [{
+            data: [percent, 100 - percent],
+            backgroundColor: [
+              percent > 50 ? '#f43f5e' : percent > 25 ? '#fbbf24' : '#10b981',
+              '#f1f5f9'
+            ],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          rotation: -90,
+          circumference: 180,
+          cutout: '80%',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false }
+          }
+        }
+      });
+      
+      document.getElementById('gauge-val').textContent = avgStockout.toFixed(2);
+      let statusText = "Optimized";
+      let statusColor = "text-emerald-500";
+      if (avgStockout > 5) {
+        statusText = "Severe Stockout Risk";
+        statusColor = "text-rose-500";
+      } else if (avgStockout > 2.5) {
+        statusText = "Moderate Risk";
+        statusColor = "text-amber-500";
+      }
+      document.getElementById('gauge-status').textContent = statusText;
+      document.getElementById('gauge-status').className = `text-[10px] font-bold ${statusColor} mt-0.5`;
+    }
+
+    // Populate visual progress list
+    function updateStockoutRisk(data) {
+      const storeLookup = {};
+      state.stores.forEach(s => storeLookup[s.store_id] = s);
+
+      const storeStockouts = {};
+      data.forEach(r => {
+        const name = storeLookup[r.store_id]?.store_name || r.store_id;
+        storeStockouts[name] = (storeStockouts[name] || 0) + r.stockout_items;
+      });
+      
+      const highRisk = Object.keys(storeStockouts)
+        .map(name => ({ name, stockouts: storeStockouts[name] }))
+        .sort((a, b) => b.stockouts - a.stockouts)
+        .slice(0, 4);
+        
+      const container = document.getElementById('stockout-list');
+      container.innerHTML = '';
+      
+      if (highRisk.length === 0 || highRisk.every(item => item.stockouts === 0)) {
+        container.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">No Stockout Incidents Reported</p>';
+        return;
+      }
+      
+      highRisk.forEach(item => {
+        const riskColor = item.stockouts > 120 ? 'bg-rose-500' : item.stockouts > 60 ? 'bg-amber-500' : 'bg-emerald-500';
+        const percent = Math.min(100, (item.stockouts / 200) * 100);
+        container.innerHTML += `
+          <div>
+            <div class="flex justify-between text-[11px] font-semibold text-slate-700 mb-1">
+              <span class="truncate pr-2">${item.name}</span>
+              <span class="shrink-0 font-bold">${item.stockouts} Units</span>
+            </div>
+            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+              <div class="${riskColor} h-1.5 rounded-full transition-all duration-300" style="width: ${percent}%"></div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // Dynamic NLP Style Business Insights Engine
+    function updateInsights(data) {
+      const container = document.getElementById('ai-insights-box');
+      if (data.length === 0) {
+        container.innerHTML = '<p class="text-slate-400 text-sm">Waiting for valid operational data to generate business insights.</p>';
+        return;
+      }
+
+      const storeLookup = {};
+      state.stores.forEach(s => storeLookup[s.store_id] = s);
+      
+      // Calculate Best/Worst Region
+      const regionSales = {};
+      data.forEach(r => {
+        const reg = storeLookup[r.store_id]?.region || 'Unknown';
+        regionSales[reg] = (regionSales[reg] || 0) + (r.sales_amount - r.return_amount);
+      });
+      const sortedRegions = Object.keys(regionSales).sort((a,b) => regionSales[b] - regionSales[a]);
+      const bestRegion = sortedRegions[0] || 'N/A';
+      const worstRegion = sortedRegions[sortedRegions.length - 1] || 'N/A';
+      
+      // Calculate Stores Missing Targets
+      const storeTargetTracking = {};
+      data.forEach(r => {
+        const name = storeLookup[r.store_id]?.store_name || r.store_id;
+        if (!storeTargetTracking[name]) {
+          storeTargetTracking[name] = { sales: 0, target: 0 };
+        }
+        storeTargetTracking[name].sales += r.sales_amount;
+        storeTargetTracking[name].target += r.target_amount;
+      });
+      
+      const missingTargets = [];
+      Object.keys(storeTargetTracking).forEach(name => {
+        const ach = storeTargetTracking[name].target > 0 ? (storeTargetTracking[name].sales / storeTargetTracking[name].target) * 100 : 100;
+        if (ach < 95) {
+          missingTargets.push({ name, ach });
+        }
+      });
+      missingTargets.sort((a,b) => a.ach - b.ach);
+
+      // High Return Categories
+      const catReturns = {};
+      const catSales = {};
+      data.forEach(r => {
+        catReturns[r.category] = (catReturns[r.category] || 0) + r.return_amount;
+        catSales[r.category] = (catSales[r.category] || 0) + r.sales_amount;
+      });
+      
+      const highReturnCats = [];
+      Object.keys(catSales).forEach(cat => {
+        const rate = catSales[cat] > 0 ? (catReturns[cat] / catSales[cat]) * 100 : 0;
+        if (rate > 5) {
+          highReturnCats.push({ cat, rate });
+        }
+      });
+      highReturnCats.sort((a,b) => b.rate - a.rate);
+
+      // Paragraph Compilations
+      let bestWorstText = `The **${bestRegion} Region** is currently driving peak regional margins, accounting for **${formatCurrency(regionSales[bestRegion] || 0)}** in net performance. In contrast, the **${worstRegion} Region** registers as the lagging geographical sector, concluding at **${formatCurrency(regionSales[worstRegion] || 0)}**. Allocating localized resources to the latter cluster is recommended to address standard performance gaps.`;
+      
+      let targetText = "";
+      if (missingTargets.length > 0) {
+        const topMisses = missingTargets.slice(0, 3).map(m => `${m.name} (${m.ach.toFixed(1)}% Achieved)`).join(", ");
+        targetText = `Operational analysis flags **${missingTargets.length} individual hub(s)** operating below target performance limits. The largest target deficits are centered in: **${topMisses}**. Operational audits or localized supply audits should prioritize these sites.`;
+      } else {
+        targetText = `Outstanding performance! All stores under current filtering configurations are successfully hitting or exceeding their respective targets.`;
+      }
+      
+      let returnsText = "";
+      if (highReturnCats.length > 0) {
+        const list = highReturnCats.slice(0, 3).map(c => `**${c.cat}** (${c.rate.toFixed(1)}% Return Rate)`).join(", ");
+        returnsText = `Profit margins are experiencing dilution due to return levels in: ${list}. We recommend checking product descriptions, fit accuracy, and transit packaging protocols for these lines.`;
+      } else {
+        returnsText = `Product return parameters remain stabilized below critical metrics (<5%) across all product classifications.`;
+      }
+
+      container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-slate-600 leading-relaxed">
+          <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-xl">
+            <h5 class="font-extrabold text-indigo-900 mb-2 flex items-center">
+              <i class="fa-solid fa-map-location-dot mr-1.5"></i> Geographic Analysis
+            </h5>
+            <p>${bestWorstText}</p>
+          </div>
+          <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl">
+            <h5 class="font-extrabold text-amber-900 mb-2 flex items-center">
+              <i class="fa-solid fa-crosshairs mr-1.5"></i> Target Deviations
+            </h5>
+            <p>${targetText}</p>
+          </div>
+          <div class="bg-rose-50 border-l-4 border-rose-500 p-4 rounded-r-xl">
+            <h5 class="font-extrabold text-rose-900 mb-2 flex items-center">
+              <i class="fa-solid fa-arrow-rotate-left mr-1.5"></i> Returns Assessment
+            </h5>
+            <p>${returnsText}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    // Export Dynamic CSV Sheet
+    function exportFilteredData() {
+      const filtered = getFilteredRecords();
+      if (filtered.length === 0) {
+        alert('No data is currently available to export.');
+        return;
+      }
+      const storeMap = {};
+      state.stores.forEach(s => storeMap[s.store_id] = s);
+      
+      const headers = ['Week', 'Store ID', 'Store Name', 'Region', 'City', 'Store Format', 'Category', 'Sales Amount', 'Target Amount', 'Transactions Count', 'Return Amount', 'Discount Amount', 'Stockout Items'];
+      const csvRows = [headers.join(',')];
+      
+      filtered.forEach(row => {
+        const store = storeMap[row.store_id] || {};
+        const line = [
+          `"${row.week}"`,
+          `"${row.store_id}"`,
+          `"${(store.store_name || '').replace(/"/g, '""')}"`,
+          `"${store.region || ''}"`,
+          `"${store.city || ''}"`,
+          `"${store.store_format || ''}"`,
+          `"${row.category}"`,
+          row.sales_amount,
+          row.target_amount,
+          row.transactions_count,
+          row.return_amount,
+          row.discount_amount,
+          row.stockout_items
+        ];
+        csvRows.push(line.join(','));
+      });
+      
+      const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `retail_sales_report_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Print Business Insights Viewport
+    function printInsights() {
+      const content = document.getElementById('ai-insights-box').innerHTML;
+      const printWindow = window.open('', '_blank', 'height=600,width=800');
+      printWindow.document.write('<html><head><title>Retail Sales Intelligence Summary</title>');
+      printWindow.document.write('<link href="https://cdn.tailwindcss.com" rel="stylesheet">');
+      printWindow.document.write('</head><body class="p-8 text-slate-800 bg-white">');
+      printWindow.document.write('<div class="max-w-4xl mx-auto">');
+      printWindow.document.write('<h1 class="text-xl font-extrabold border-b pb-4 mb-6 text-slate-900">Executive Sales Intelligence Summary</h1>');
+      printWindow.document.write(content);
+      printWindow.document.write('<p class="text-[10px] text-slate-400 mt-12 border-t pt-4 text-center">Generated dynamically via RetailIQ Platform</p>');
+      printWindow.document.write('</div></body></html>');
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    }
+
+    // Utility function allowing user to download sample formats
+    function downloadSample(type) {
+      let sampleData = [];
+      if (type === 'store') {
+        sampleData = [
+          { store_id: 'S001', store_name: 'Metro Square Supermarket', region: 'North', city: 'New York', store_format: 'Supermarket' },
+          { store_id: 'S002', store_name: 'Downtown Express', region: 'South', city: 'Miami', store_format: 'Express' }
+        ];
+      } else if (type === 'sales') {
+        sampleData = [
+          { store_id: 'S001', week: 'Week 01', category: 'Electronics', sales_amount: 25000, target_amount: 22000, transactions_count: 90, return_amount: 1200, discount_amount: 1500, stockout_items: 2 },
+          { store_id: 'S001', week: 'Week 01', category: 'Apparel', sales_amount: 12000, target_amount: 13000, transactions_count: 240, return_amount: 800, discount_amount: 1100, stockout_items: 5 }
+        ];
+      }
+      
+      const worksheet = XLSX.utils.json_to_sheet(sampleData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+      XLSX.writeFile(workbook, `sample_${type}_master.xlsx`);
+    }
+  </script>
+</body>
+</html>
